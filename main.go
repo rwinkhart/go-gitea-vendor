@@ -39,7 +39,7 @@ func main() {
 		os.Exit(0)
 	}
 	baseURL := os.Args[1]
-	apiURL := baseURL + "/api/v1/repos/search?sort=updated&order=desc&limit=999"
+	apiURL := baseURL + "/api/v1/repos/search?sort=updated&order=asc&limit=999"
 	username := os.Args[2]
 	var organization string
 	if len(os.Args) == 4 {
