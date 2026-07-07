@@ -118,48 +118,48 @@ repoLoop:
 			//// clone
 			oldRepo, err := git.PlainClone(currentRepoDir, &git.CloneOptions{URL: repoResp.MasterURL, Progress: nil, Depth: 1})
 			if err != nil {
-				other.PrintError("Failed to clone "+repoResp.MasterURL+": "+err.Error(), 7)
+				other.PrintError("Failed to clone "+repoResp.MasterURL+": "+err.Error(), 9)
 			}
 			//// store commit hash
 			head, err := oldRepo.Head()
 			if err != nil {
-				other.PrintError("Failed to get head of "+repoResp.MasterURL+": "+err.Error(), 8)
+				other.PrintError("Failed to get head of "+repoResp.MasterURL+": "+err.Error(), 10)
 			}
 			if err = os.WriteFile(currentRepoDir+"/"+hashName, []byte(head.Hash().String()), 0644); err != nil {
-				other.PrintError("Failed to write head hash for "+repoResp.MasterURL+": "+err.Error(), 9)
+				other.PrintError("Failed to write head hash for "+repoResp.MasterURL+": "+err.Error(), 11)
 			}
 			//// vendor
 			vendorCmd := exec.Command("go", "mod", "vendor")
 			vendorCmd.Dir = currentRepoDir
 			if err = vendorCmd.Run(); err != nil {
-				other.PrintError("Failed to vendor "+repoResp.MasterURL+": "+err.Error(), 10)
+				other.PrintError("Failed to vendor "+repoResp.MasterURL+": "+err.Error(), 12)
 			}
 			//// re-init
 			if err = os.RemoveAll(currentRepoDir + "/.git"); err != nil {
-				other.PrintError("Failed to remove .git directory for "+repoResp.MasterURL+": "+err.Error(), 11)
+				other.PrintError("Failed to remove .git directory for "+repoResp.MasterURL+": "+err.Error(), 13)
 			}
 			newRepo, err := git.PlainInit(currentRepoDir, false)
 			if err != nil {
-				other.PrintError("Failed to init in "+currentRepoDir+": "+err.Error(), 12)
+				other.PrintError("Failed to init in "+currentRepoDir+": "+err.Error(), 14)
 			}
 			//// set origin
 			if _, err = newRepo.CreateRemote(&config.RemoteConfig{
 				Name: "origin",
 				URLs: []string{baseURL + "/" + outputOrganization + "/" + repoResp.Name + "-ggv.git"},
 			}); err != nil {
-				other.PrintError("Failed to set origin for "+currentRepoDir+": "+err.Error(), 13)
+				other.PrintError("Failed to set origin for "+currentRepoDir+": "+err.Error(), 15)
 			}
 			//// add
 			wt, err := newRepo.Worktree()
 			if err != nil {
-				other.PrintError("Failed to get worktree for "+currentRepoDir+": "+err.Error(), 14)
+				other.PrintError("Failed to get worktree for "+currentRepoDir+": "+err.Error(), 16)
 			}
 			if err = wt.AddGlob("."); err != nil {
-				other.PrintError("Failed to add files in "+currentRepoDir+": "+err.Error(), 15)
+				other.PrintError("Failed to add files in "+currentRepoDir+": "+err.Error(), 17)
 			}
 			//// commit
 			if _, err = wt.Commit("go-gitea-vendor", &git.CommitOptions{}); err != nil {
-				other.PrintError("Failed to commit in "+currentRepoDir+": "+err.Error(), 16)
+				other.PrintError("Failed to commit in "+currentRepoDir+": "+err.Error(), 18)
 			}
 			//// push
 			if err = newRepo.Push(&git.PushOptions{
@@ -171,16 +171,16 @@ repoLoop:
 					}),
 				},
 			}); err != nil {
-				other.PrintError("Failed to push "+currentRepoDir+": "+err.Error(), 17)
+				other.PrintError("Failed to push "+currentRepoDir+": "+err.Error(), 19)
 			}
 		}
 	}
 
 	// end cleanup
 	if err = os.RemoveAll(finishedDir); err != nil {
-		other.PrintError("Failed to remove old repos dir: "+err.Error(), 18)
+		other.PrintError("Failed to remove old repos dir: "+err.Error(), 20)
 	}
 	if err = os.Rename(workingDir, finishedDir); err != nil {
-		other.PrintError("Failed to rename new repos dir: "+err.Error(), 20)
+		other.PrintError("Failed to rename new repos dir: "+err.Error(), 21)
 	}
 }
