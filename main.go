@@ -8,11 +8,13 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"time"
 
 	"github.com/go-git/go-git/v6"
 	"github.com/go-git/go-git/v6/config"
 	"github.com/go-git/go-git/v6/plumbing"
 	gitclient "github.com/go-git/go-git/v6/plumbing/client"
+	"github.com/go-git/go-git/v6/plumbing/object"
 	githttp "github.com/go-git/go-git/v6/plumbing/transport/http"
 	"github.com/go-git/go-git/v6/storage/memory"
 	"github.com/rwinkhart/go-boilerplate/back"
@@ -175,7 +177,7 @@ repoLoop:
 				continue repoLoop
 			}
 			//// commit
-			if _, err = wt.Commit("go-gitea-vendor", &git.CommitOptions{}); err != nil {
+			if _, err = wt.Commit("go-gitea-vendor", &git.CommitOptions{Author: &object.Signature{Name: "ggv", Email: "gvv@local.local", When: time.Now()}}); err != nil {
 				logError("Failed to commit in " + currentRepoDir + ": " + err.Error())
 				continue repoLoop
 			}
