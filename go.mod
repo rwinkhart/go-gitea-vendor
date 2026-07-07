@@ -1,4 +1,4 @@
-module go-gitea-vendor
+module ggv
 
 go 1.26.4
 

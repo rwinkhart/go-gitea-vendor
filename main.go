@@ -18,6 +18,7 @@ import (
 
 const workingDir = "repos-new"
 const finishedDir = "repos"
+const hashName = ".gvv-hash"
 
 type giteaRespT struct {
 	Data []struct {
@@ -77,49 +78,57 @@ func main() {
 		other.PrintError("Failed to unmarshal response: "+err.Error(), 6)
 	}
 	os.Mkdir(workingDir, 0755)
-	for _, repo := range giteaResp.Data {
-		if repo.Language == "Go" && repo.MirrorInterval != "" {
+	for _, repoResp := range giteaResp.Data {
+		if repoResp.Language == "Go" && repoResp.MirrorInterval != "" {
 			//// clone
-			currentRepoDir := workingDir + "/" + repo.Name + "-ggv"
-			_, err = git.PlainClone(currentRepoDir, &git.CloneOptions{URL: repo.MasterURL, Progress: nil, Depth: 1})
+			currentRepoDir := workingDir + "/" + repoResp.Name + "-ggv"
+			oldRepo, err := git.PlainClone(currentRepoDir, &git.CloneOptions{URL: repoResp.MasterURL, Progress: nil, Depth: 1})
 			if err != nil {
-				other.PrintError("Failed to clone "+repo.MasterURL+": "+err.Error(), 7)
+				other.PrintError("Failed to clone "+repoResp.MasterURL+": "+err.Error(), 7)
+			}
+			//// store commit hash
+			head, err := oldRepo.Head()
+			if err != nil {
+				other.PrintError("Failed to get head of "+repoResp.MasterURL+": "+err.Error(), 8)
+			}
+			if err = os.WriteFile(currentRepoDir+"/"+hashName, []byte(head.Hash().String()), 0644); err != nil {
+				other.PrintError("Failed to write head hash for "+repoResp.MasterURL+": "+err.Error(), 9)
 			}
 			//// vendor
 			vendorCmd := exec.Command("go", "mod", "vendor")
 			vendorCmd.Dir = currentRepoDir
 			if err = vendorCmd.Run(); err != nil {
-				other.PrintError("Failed to vendor "+repo.MasterURL+": "+err.Error(), 8)
+				other.PrintError("Failed to vendor "+repoResp.MasterURL+": "+err.Error(), 10)
 			}
 			//// re-init
 			if err = os.RemoveAll(currentRepoDir + "/.git"); err != nil {
-				other.PrintError("Failed to remove .git directory for "+repo.MasterURL, 9)
+				other.PrintError("Failed to remove .git directory for "+repoResp.MasterURL+": "+err.Error(), 11)
 			}
-			goRepo, err := git.PlainInit(currentRepoDir, false)
+			newRepo, err := git.PlainInit(currentRepoDir, false)
 			if err != nil {
-				other.PrintError("Failed to init in "+currentRepoDir, 10)
+				other.PrintError("Failed to init in "+currentRepoDir+": "+err.Error(), 12)
 			}
 			//// set origin
-			if _, err = goRepo.CreateRemote(&config.RemoteConfig{
+			if _, err = newRepo.CreateRemote(&config.RemoteConfig{
 				Name: "origin",
-				URLs: []string{baseURL + "/" + organization + "/" + repo.Name + "-ggv.git"},
+				URLs: []string{baseURL + "/" + organization + "/" + repoResp.Name + "-ggv.git"},
 			}); err != nil {
-				other.PrintError("Failed to set origin for "+currentRepoDir+": "+err.Error(), 15)
+				other.PrintError("Failed to set origin for "+currentRepoDir+": "+err.Error(), 13)
 			}
 			//// add
-			wt, err := goRepo.Worktree()
+			wt, err := newRepo.Worktree()
 			if err != nil {
-				other.PrintError("Failed to get worktree for "+currentRepoDir, 11)
+				other.PrintError("Failed to get worktree for "+currentRepoDir+": "+err.Error(), 14)
 			}
 			if err = wt.AddGlob("."); err != nil {
-				other.PrintError("Failed to add files in "+currentRepoDir+": "+err.Error(), 12)
+				other.PrintError("Failed to add files in "+currentRepoDir+": "+err.Error(), 15)
 			}
 			//// commit
 			if _, err = wt.Commit("go-gitea-vendor", &git.CommitOptions{}); err != nil {
-				other.PrintError("Failed to commit in "+currentRepoDir+": "+err.Error(), 13)
+				other.PrintError("Failed to commit in "+currentRepoDir+": "+err.Error(), 16)
 			}
 			//// push
-			if err = goRepo.Push(&git.PushOptions{
+			if err = newRepo.Push(&git.PushOptions{
 				Force: true,
 				ClientOptions: []gitclient.Option{
 					gitclient.WithHTTPAuth(&githttp.BasicAuth{
@@ -137,13 +146,13 @@ func main() {
 	isAccessible, err := back.TargetIsFile(finishedDir, false)
 	if isAccessible && err == nil {
 		if err = os.RemoveAll(finishedDir + ".bak"); err != nil {
-			other.PrintError("Failed to remove old backup dir", 14)
+			other.PrintError("Failed to remove old backup dir: "+err.Error(), 18)
 		}
 		if err = os.Rename(finishedDir, finishedDir+".bak"); err != nil {
-			other.PrintError("Failed to backup old repos dir", 15)
+			other.PrintError("Failed to backup old repos dir: "+err.Error(), 19)
 		}
 	}
 	if err = os.Rename(workingDir, finishedDir); err != nil {
-		other.PrintError("Failed to rename new repos dir", 16)
+		other.PrintError("Failed to rename new repos dir: "+err.Error(), 20)
 	}
 }
