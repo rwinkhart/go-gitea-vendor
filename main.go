@@ -25,10 +25,12 @@ const hashName = ".gvv-hash"
 
 type giteaRespT struct {
 	Data []struct {
-		MirrorInterval string `json:"mirror_interval"`
-		Language       string `json:"language"`
-		MasterURL      string `json:"original_url"`
-		Name           string `json:"name"`
+		Owner struct {
+			Organization string `json:"username"`
+		} `json:"owner"`
+		Language  string `json:"language"`
+		MasterURL string `json:"original_url"`
+		Name      string `json:"name"`
 	}
 }
 
@@ -40,7 +42,7 @@ func main() {
 	}
 	baseURL := os.Args[1]
 	apiURL := baseURL + "/api/v1/repos/search?sort=updated&order=asc&limit=999"
-	organization := os.Args[2]
+	outputOrganization := os.Args[2]
 	fmt.Print("Input token: ")
 	token := back.ReadFromStdin()
 	if len(token) == 0 {
@@ -79,7 +81,7 @@ func main() {
 	os.Mkdir(workingDir, 0755)
 repoLoop:
 	for _, repoResp := range giteaResp.Data {
-		if repoResp.Language == "Go" && repoResp.MirrorInterval != "" {
+		if repoResp.Owner.Organization != outputOrganization && repoResp.Language == "Go" {
 			currentRepoDir := workingDir + "/" + repoResp.Name + "-ggv"
 			//// skip if local copy is already up-to-date
 			targetRepoDir := finishedDir + "/" + repoResp.Name + "-ggv"
@@ -143,7 +145,7 @@ repoLoop:
 			//// set origin
 			if _, err = newRepo.CreateRemote(&config.RemoteConfig{
 				Name: "origin",
-				URLs: []string{baseURL + "/" + organization + "/" + repoResp.Name + "-ggv.git"},
+				URLs: []string{baseURL + "/" + outputOrganization + "/" + repoResp.Name + "-ggv.git"},
 			}); err != nil {
 				other.PrintError("Failed to set origin for "+currentRepoDir+": "+err.Error(), 13)
 			}
