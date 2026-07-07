@@ -34,16 +34,13 @@ type giteaRespT struct {
 
 func main() {
 	// args
-	if len(os.Args) < 2 {
-		fmt.Println("Usage: " + os.Args[0] + " <base url> [output organization]\n\nAPI token can be piped into stdin to run non-interactively!")
+	if len(os.Args) < 3 {
+		fmt.Println("Usage: " + os.Args[0] + " <base url> <output organization>\n\nAPI token can be piped into stdin to run non-interactively!")
 		os.Exit(0)
 	}
 	baseURL := os.Args[1]
 	apiURL := baseURL + "/api/v1/repos/search?sort=updated&order=asc&limit=999"
-	var organization string
-	if len(os.Args) == 3 {
-		organization = os.Args[2]
-	}
+	organization := os.Args[2]
 	fmt.Print("Input token: ")
 	token := back.ReadFromStdin()
 	if len(token) == 0 {

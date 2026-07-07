@@ -10,7 +10,9 @@ ENABLE_PUSH_CREATE_USER = true
 ENABLE_PUSH_CREATE_ORG = true
 ```
 
-Optionally, create a new organization in your Gitea instance to store your `ggv` vendor repos.
+Create a new organization in your Gitea instance to store your `ggv` vendor repos.
+This is necessary not just to keep your Gitea clean, but also to tell `ggv` what repos to ignore as inputs
+(you don't want to vendor your vendor repos!).
 
 > [!WARNING] 
 >It is recommended to create a user that only has access to that one organization and use said new user to generate the below API key.
