@@ -7,11 +7,14 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"strings"
 
 	"github.com/go-git/go-git/v6"
 	"github.com/go-git/go-git/v6/config"
+	"github.com/go-git/go-git/v6/plumbing"
 	gitclient "github.com/go-git/go-git/v6/plumbing/client"
 	githttp "github.com/go-git/go-git/v6/plumbing/transport/http"
+	"github.com/go-git/go-git/v6/storage/memory"
 	"github.com/rwinkhart/go-boilerplate/back"
 	"github.com/rwinkhart/go-boilerplate/other"
 )
@@ -78,10 +81,43 @@ func main() {
 		other.PrintError("Failed to unmarshal response: "+err.Error(), 6)
 	}
 	os.Mkdir(workingDir, 0755)
+repoLoop:
 	for _, repoResp := range giteaResp.Data {
 		if repoResp.Language == "Go" && repoResp.MirrorInterval != "" {
-			//// clone
 			currentRepoDir := workingDir + "/" + repoResp.Name + "-ggv"
+			//// skip if local copy is already up-to-date
+			targetRepoDir := finishedDir + "/" + repoResp.Name + "-ggv"
+			if localHash, err := os.ReadFile(targetRepoDir + "/" + hashName); err == nil {
+				rem := git.NewRemote(memory.NewStorage(), &config.RemoteConfig{
+					Name: "origin",
+					URLs: []string{repoResp.MasterURL},
+				})
+				if refs, err := rem.List(&git.ListOptions{}); err == nil {
+					for _, ref := range refs {
+						if ref.Name() == plumbing.HEAD {
+							// HEAD is a symbolic ref; resolve to its target branch
+							target := ref.Target()
+							for _, ref2 := range refs {
+								if ref2.Name() == target {
+									if strings.TrimSpace(string(localHash)) == ref2.Hash().String() {
+										fmt.Println("Skipping " + repoResp.MasterURL + " (already up-to-date)")
+										if err = os.MkdirAll(currentRepoDir, 0755); err != nil {
+											other.PrintError("Failed to create dummy repo for "+repoResp.MasterURL+": "+err.Error(), 7)
+										}
+										if err = os.WriteFile(currentRepoDir+"/"+hashName, localHash, 0644); err != nil {
+											other.PrintError("Failed to write dummy head hash for "+repoResp.MasterURL+": "+err.Error(), 8)
+										}
+										continue repoLoop
+									}
+									break
+								}
+							}
+							break
+						}
+					}
+				}
+			}
+			//// clone
 			oldRepo, err := git.PlainClone(currentRepoDir, &git.CloneOptions{URL: repoResp.MasterURL, Progress: nil, Depth: 1})
 			if err != nil {
 				other.PrintError("Failed to clone "+repoResp.MasterURL+": "+err.Error(), 7)
@@ -143,14 +179,8 @@ func main() {
 	}
 
 	// end cleanup
-	isAccessible, err := back.TargetIsFile(finishedDir, false)
-	if isAccessible && err == nil {
-		if err = os.RemoveAll(finishedDir + ".bak"); err != nil {
-			other.PrintError("Failed to remove old backup dir: "+err.Error(), 18)
-		}
-		if err = os.Rename(finishedDir, finishedDir+".bak"); err != nil {
-			other.PrintError("Failed to backup old repos dir: "+err.Error(), 19)
-		}
+	if err = os.RemoveAll(finishedDir); err != nil {
+		other.PrintError("Failed to remove old backup dir: "+err.Error(), 18)
 	}
 	if err = os.Rename(workingDir, finishedDir); err != nil {
 		other.PrintError("Failed to rename new repos dir: "+err.Error(), 20)
