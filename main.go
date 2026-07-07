@@ -180,7 +180,7 @@ repoLoop:
 
 	// end cleanup
 	if err = os.RemoveAll(finishedDir); err != nil {
-		other.PrintError("Failed to remove old backup dir: "+err.Error(), 18)
+		other.PrintError("Failed to remove old repos dir: "+err.Error(), 18)
 	}
 	if err = os.Rename(workingDir, finishedDir); err != nil {
 		other.PrintError("Failed to rename new repos dir: "+err.Error(), 20)
